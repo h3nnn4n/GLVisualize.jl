@@ -51,7 +51,7 @@ void main() {
 	gl_Position = vec4(vertex, texelFetch(test, 1).x, 1.0);
 }
 """
-test = texture_buffer(rand(Float32, 7))
+test = TextureBuffer(rand(Float32, 7))
 const triangle = RenderObject(
 	Dict(
 		:vertex => verts,

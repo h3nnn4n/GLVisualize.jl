@@ -1,4 +1,4 @@
-GLVisualize.visualize_default{T <: Real}(::Union{Texture{Point{2, T}, 1}, Vector{Point{2, T}}}, s::Style, kw_args=Dict()) = Dict(
+_default{T <: Point{2}}(::VecTypes{T}, s::Style, kw_args=Dict()) = Dict(
     :primitive          => GLUVMesh2D(Rectangle(-0.5f0, -0.5f0, 1f0, 1f0)),
     :scale              => Vec2f0(20),
     :shape              => RECTANGLE,
@@ -7,29 +7,28 @@ GLVisualize.visualize_default{T <: Real}(::Union{Texture{Point{2, T}, 1}, Vector
     :glow_width         => 4f0,
     :transparent_picking => true,
     :color              => default(RGBA, s),
-    :stroke_color       => RGBA{Float32}(0.9, 0.9, 1.0, 1.0),
-    :glow_color         => RGBA{Float32}(0.,0.,0., 0.7),
+    :stroke_color       => default(RGBA, s,2),
+    :glow_color         => default(RGBA, s,3),
     :preferred_camera   => :orthographic_pixel
 )
 
-visualize(locations::Vector{Point{2, Float32}}, s::Style, customizations=visualize_default(locations, s)) =
-    visualize(texture_buffer(locations), s, customizations)
+visualize{T <: Point{2}}(locations::VecOrSig{T}, s::Style, data=visualize_default(locations, s)) =
+    visualize(TextureBuffer(locations), s, data)
 
 function visualize(locations::Signal{Vector{Point2f0}}, s::Style, customizations=visualize_default(locations.value, s))
-    start_val = texture_buffer(locations.value)
+    start_val = TextureBuffer(locations.value)
     const_lift(update!, start_val, locations)
     visualize(start_val, s, customizations)
 end
 
 
 
-function visualize{T <: Real}(
-        positions::Texture{Point{2, T}, 1},
-        s::Style, customizations=visualize_default(positions, s)
+function visualize{T <: Point{2}}(
+        positions::Texture{T, 1},
+        s::Style, data=visualize_default(positions, s)
     )
-    @materialize! primitive = customizations
-    @materialize stroke_width, scale, glow_width = customizations
-    data = merge(collect_for_gl(primitive), customizations)
+    @materialize! primitive = data
+    @materialize stroke_width, scale, glow_width = data
     data[:positions] = positions
     data[:offset_scale] = const_lift(+, const_lift(/, stroke_width, Input(2)), glow_width, scale)
     

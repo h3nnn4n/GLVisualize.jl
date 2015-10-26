@@ -33,7 +33,7 @@ function test_data()
 	cubecamera(w)
 	x0 = Vector2D(0.3, 0.1)
 	particles 		= [Particle(x0, Vector2D(1.0, 0.001*i)) for i=1:max_particles]
-	colors 			= texture_buffer(RGBA{U8}[RGBA{U8}(1., 0.1, clamp(0.001*i, 0.0, 1.0), 1.0) for i=1:max_particles])
+	colors 			= TextureBuffer(RGBA{U8}[RGBA{U8}(1., 0.1, clamp(0.001*i, 0.0, 1.0), 1.0) for i=1:max_particles])
 
 	particle_stream = const_lift(BilliardModels.step!, particles, table, bounce(1:10))
 

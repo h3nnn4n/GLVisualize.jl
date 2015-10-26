@@ -1,14 +1,4 @@
-#=
-type Particle
-::Position #-> Grid, Vol, Points2/3D
-::Scale
-::Rotation
-::Primitive
-::Color
-end
-=#
-
-visualize_default{T <: Vec{3}}(::VolumeTypes{T}, ::Style, kw_args = Dict()) = Dict(
+_default{T <: Vec{3}}(::VolumeTypes{T}, ::Style, kw_args = Dict()) = Dict(
     :primitive      => Pyramid(Point{3, Float32}(0, 0,-0.5), 1f0, 0.2f0),
     :boundingbox    => AABB{Float32}(Vec3f0(-1), Vec3f0(1)),
     :color_norm     => Vec2f0(-1,1),

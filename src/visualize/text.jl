@@ -1,14 +1,14 @@
-visualize_default(::Union{GPUVector{GLSprite}, AbstractString}, ::Style, kw_args=Dict()) = Dict(
+_default(::Union{GPUVector{GLSprite}, AbstractString}, ::Style, kw_args=Dict()) = Dict(
     :primitive          => GLUVMesh2D(Rectangle(0f0, 0f0, 1f0, 1f0)),
     :styles             => Texture([RGBA{U8}(0.0,0.0,0.0,1.0)]),
     :atlas              => get_texture_atlas(),
-    :shape              => Cint(DISTANCEFIELD),
-    :style              => Cint(FILLED),
+    :shape              => DISTANCEFIELD,
+    :style              => FILLED,
     :transparent_picking => true,
     :preferred_camera   => :orthographic_pixel
 )
 
-function visualize_default(::Union{GPUVector{GLSprite}, AbstractString}, ::Style{:square}, kw_args=Dict())
+function _default(::Union{GPUVector{GLSprite}, AbstractString}, ::Style{:square}, kw_args=Dict())
     return Dict(
         :primitive          => GLUVMesh2D(Rectangle(0f0, 0f0, 1f0, 1f0)),
         :styles             => Texture([RGBA{U8}(0,0,0,0), RGBA{U8}(0.7,.5,1.,0.5)]),
@@ -24,9 +24,9 @@ end
 
 function visualize(text::AbstractString, s::Style, customizations=visualize_default(text, s))
     startposition = get(customizations, :startposition, Point2f0(0))
-    glyphs        = GPUVector(texture_buffer(process_for_gl(text)))
-    positions     = GPUVector(texture_buffer(calc_position(glyphs, startposition)))
-    style_index   = GPUVector(texture_buffer(fill(GLSpriteStyle(UInt16(0), UInt16(0)), length(text))))
+    glyphs        = GPUVector(TextureBuffer(process_for_gl(text)))
+    positions     = GPUVector(TextureBuffer(calc_position(glyphs, startposition)))
+    style_index   = GPUVector(TextureBuffer(fill(GLSpriteStyle(UInt16(0), UInt16(0)), length(text))))
     visualize(glyphs, positions, style_index, customizations[:model], s, customizations)  
 end 
 
@@ -35,13 +35,13 @@ function update_text(newtext::AbstractString, text_robj::RenderObject)
     resize!(glyphs, length(newtext))
     update!(glyphs, process_for_gl(newtext))
     update_positions(glyphs, text_robj, style_index)
-
 end
+
 function visualize{S <: AbstractString}(text::Signal{S}, s::Style, customizations=visualize_default(text, s))
     startposition = get(customizations, :startposition, Point2f0(0))
-    glyphs      = GPUVector(texture_buffer(process_for_gl(text.value)))
-    positions   = GPUVector(texture_buffer(calc_position(glyphs, startposition)))
-    style_index = GPUVector(texture_buffer(fill(GLSpriteStyle(UInt16(0), UInt16(0)), length(text.value))))
+    glyphs      = GPUVector(TextureBuffer(process_for_gl(text.value)))
+    positions   = GPUVector(TextureBuffer(calc_position(glyphs, startposition)))
+    style_index = GPUVector(TextureBuffer(fill(GLSpriteStyle(UInt16(0), UInt16(0)), length(text.value))))
     robj        = visualize(glyphs, positions, style_index, customizations[:model], s, customizations)
     const_lift(update_text, text, Input(robj))
     robj
@@ -189,13 +189,13 @@ function vizzedit(glyphs::GPUVector{GLSprite}, text::RenderObject, inputs)
     background = visualize(
         glyphs, 
         text[:positions], 
-        GPUVector(texture_buffer(fill(GLSpriteStyle(0,0), length(text[:positions])))), 
+        GPUVector(TextureBuffer(fill(GLSpriteStyle(0,0), length(text[:positions])))), 
         text[:model],
         Style{:square}()
     )
     text_sig, selection = textedit_signals(inputs, background, text)
     cursor_robj = cursor(text[:positions], selection, text[:model])
 
-    (background, cursor_robj, text_sig)
+    Context(background, cursor_robj), text_sig
 end
 export vizzedit

@@ -4,7 +4,7 @@ include(Pkg.dir("GLVisualize", "src", "visualize", "text", "utils.jl"))
 w = createwindow("test", 10,10, debugging=true) # dummy window for opengl context
 
 
-test_data = GPUVector(texture_buffer(map(Cint, collect("\nhallo_dolly jau whatup\ngragragagagag\n ima gangstaaa"))))
+test_data = GPUVector(TextureBuffer(map(Cint, collect("\nhallo_dolly jau whatup\ngragragagagag\n ima gangstaaa"))))
 @test next_newline(test_data, 1) == 1
 @test next_newline(test_data, 2) == 24
 @test test_data[24] == '\n'
