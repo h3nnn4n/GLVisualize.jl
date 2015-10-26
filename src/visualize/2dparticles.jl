@@ -5,7 +5,7 @@ GLVisualize.visualize_default{T <: Real}(::Union{Texture{Point{2, T}, 1}, Vector
     :style              => OUTLINED|FILLED,
     :stroke_width       => 4f0,
     :glow_width         => 4f0,
-    :transparent_picking => false,
+    :transparent_picking => true,
     :color              => default(RGBA, s),
     :stroke_color       => RGBA{Float32}(0.9, 0.9, 1.0, 1.0),
     :glow_color         => RGBA{Float32}(0.,0.,0., 0.7),
@@ -52,11 +52,11 @@ end
 visualize_default{T <: Real}(::Rectangle{T}, ::Style, kw_args=Dict()) = Dict(
     :primitive          => GLUVMesh2D(Rectangle(0f0, 0f0, 1f0, 1f0)),
     :shape              => Cint(RECTANGLE),
-    :style              => Cint(OUTLINED) | Cint(FILLED),
+    :style              => OUTLINED|FILLED,
     :stroke_width       => 2f0,
     :glow_width         => 2f0,
-    :transparent_picking => false,
-    :color              => RGBA{Float32}(0.3, 0.1, 0.9, 1.0),
+    :transparent_picking => true,
+    :color              => default(RGBA),
     :stroke_color       => RGBA{Float32}(0.3, 0.1, 0.9, 1.0),
     :glow_color         => RGBA{Float32}(0.3, 0.1, 0.9, 1.0),
     :preferred_camera   => :orthographic_pixel

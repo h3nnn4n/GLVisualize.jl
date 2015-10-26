@@ -1,4 +1,4 @@
-visualize_default{T <: Real}(::Union{Texture{Point{2, T}, 1}, Vector{Point{2, T}}}, s::Style{:lines}, kw_args=Dict()) = Dict(
+visualize_default{T <: Real}(::VecTypes{Point{2, T}}, s::Style{:lines}, kw_args=Dict()) = Dict(
     :shape               => RECTANGLE,
     :style               => FILLED,
     :transparent_picking => false,
