@@ -22,13 +22,13 @@ visualize{T <: Point{3}}(value::Union{Vector{T}, Signal{Vector{T}}}, s::Style, d
     visualize(gl_convert(TextureBuffer, value), s, data)
 
 
-visualize{T <: Vec{3}}(positions::VecTypes{T}, primitive=Cube(), data) = Particles(
-    primitive,
-    positions,
-    data[:scale],
-    data[:color],
-    data[:rotation],
+visualize{T <: Vec{3}}(rotations::VecTypes{T}, s::Style, data=visualize_default(positions, s)) = visualize(
+    Particles(
+        data;
+        rotation=rotations
+    ), s, data
 )
+
 visualize{T <: Vec{2}}(positions::VecTypes{T}, primitive=Cube(), data) = Particles(
     primitive,
     positions,

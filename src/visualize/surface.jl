@@ -35,7 +35,6 @@ function visualize{T <: AbstractFloat}(grid::Texture{T, 2}, s::Style{:surface}, 
 end
 
 
-
 #Surface from x,y,z matrices
 function visualize{T <: Texture{Float32, 2}}(xyz::Tuple{T,T,T}, s::Style{:surface}, customizations=visualize_default(z, s))
     data[:x] = xyz[1]
