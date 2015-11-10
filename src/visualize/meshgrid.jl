@@ -1,38 +1,40 @@
 immutable GLPoints end # only for dispatch 
 
-typealias P_Primitive       Union{Mesh, GLPoints, Sprite, Vector{Sprite}}
+typealias P_Primitive       Union{GPUArray{Sprite}, Mesh, GLPoints, Sprite}
 typealias P_Position{N, T}  Union{GPUArray{Point{N, T}}, Grid, Cube}
 typealias P_Scale           Union{GPUArray{Vec{N, T}}, Vec{N, T}}
 typealias P_Rotation{T <: Q.Quaternion}   Union{T, GPUArray{T}, Nothing} # rotation is optional (nothing)
 typealias P_Color{T <: Colorant}          Union{GPUArray{T}, T}
 typealias P_Intensitiy{T <:AbstractFloat} Union{GPUArray{T}, T}
 
-type Particle{PR <: Mesh, POS, SCALE, ROT, C}
+type Particle{PR <: P_Primitive, POS <: P_Position, SCALE <: P_Scale, ROT <: P_Rotation, C <: P_Color, I <: P_Intensitiy}
     primitive ::PR
     position  ::POS
     scale     ::SCALE
     rotation  ::ROT
     color     ::C
-    intensity ::C
+    intensity ::I
     color_norm::Vec2f0
 end
-Particle(;
-        primitive =  GLPoints,
-        position =   Grid(-1:1, -1:1),
-        scale =      nothing,
-        rotation =   nothing,
-        color =      nothing
-        intensity =  nothing,
-        color_norm = nothing,
-    ) = Particle(
-    gl_convert(primitive),
-    gl_convert(position),
-    gl_convert(scale),
-    gl_convert(rotation),
-    gl_convert(color),
-    gl_convert(intensity),
-    gl_convert(color_norm)
-)
+function Particle(;
+        primitive   = GLPoints,
+        position    = Grid(-1:1, -1:1),
+        scale       = nothing,
+        rotation    = nothing,
+        color       = nothing,
+        intensity   = nothing,
+        color_norm  = nothing,
+    )
+    Particle(
+        gl_convert(primitive),
+        gl_convert(position),
+        gl_convert(scale),
+        gl_convert(rotation),
+        gl_convert(color),
+        gl_convert(intensity),
+        gl_convert(color_norm)
+    )
+end
 
 Particle(data::Dict; kw_args...) = Particle(;kw_args..., [(key, data[key]) for key in fieldnames(Particle)]...)
 

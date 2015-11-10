@@ -1,32 +1,21 @@
 _default{T <: Point{2}}(::VecTypes{T}, s::Style, kw_args=Dict()) = Dict(
-    :primitive          => GLUVMesh2D(Rectangle(-0.5f0, -0.5f0, 1f0, 1f0)),
-    :scale              => Vec2f0(20),
-    :shape              => RECTANGLE,
-    :style              => OUTLINED|FILLED,
-    :stroke_width       => 4f0,
-    :glow_width         => 4f0,
+    :primitive           => GLUVMesh2D(Rectangle(-0.5f0, -0.5f0, 1f0, 1f0)),
+    :scale               => Vec2f0(20),
+    :shape               => RECTANGLE,
+    :style               => OUTLINED|FILLED,
+    :stroke_width        => 4f0,
+    :glow_width          => 4f0,
     :transparent_picking => true,
-    :color              => default(RGBA, s),
-    :stroke_color       => default(RGBA, s,2),
-    :glow_color         => default(RGBA, s,3),
-    :preferred_camera   => :orthographic_pixel
+    :color               => default(RGBA, s),
+    :stroke_color        => default(RGBA, s, 2),
+    :glow_color          => default(RGBA, s, 3),
+    :preferred_camera    => :orthographic_pixel
 )
 
-visualize{T <: Point{2}}(locations::VecOrSig{T}, s::Style, data=visualize_default(locations, s)) =
-    visualize(TextureBuffer(locations), s, data)
-
-function visualize(locations::Signal{Vector{Point2f0}}, s::Style, customizations=visualize_default(locations.value, s))
-    start_val = TextureBuffer(locations.value)
-    const_lift(update!, start_val, locations)
-    visualize(start_val, s, customizations)
-end
+visualize{T <: Point{2}}(locations::VecOrSig{T}, s::Style, data::Dict) = _visualize(TextureBuffer(locations), s, data)
 
 
-
-function visualize{T <: Point{2}}(
-        positions::Texture{T, 1},
-        s::Style, data=visualize_default(positions, s)
-    )
+function _visualize{T <: Point{2}}(positions::TextureBuffer{T, 1}, s::Style, data::Dict)
     @materialize! primitive = data
     @materialize stroke_width, scale, glow_width = data
     data[:positions] = positions
@@ -48,7 +37,7 @@ function visualize{T <: Point{2}}(
 end
 
 
-visualize_default{T <: Real}(::Rectangle{T}, ::Style, kw_args=Dict()) = Dict(
+_default{T <: Real}(::Rectangle{T}, ::Style, kw_args=Dict()) = Dict(
     :primitive          => GLUVMesh2D(Rectangle(0f0, 0f0, 1f0, 1f0)),
     :shape              => Cint(RECTANGLE),
     :style              => OUTLINED|FILLED,
