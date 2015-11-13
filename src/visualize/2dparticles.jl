@@ -1,84 +1,32 @@
-_default{T <: Point{2}}(::VecTypes{T}, s::Style, kw_args=Dict()) = Dict(
-    :primitive           => GLUVMesh2D(Rectangle(-0.5f0, -0.5f0, 1f0, 1f0)),
-    :scale               => Vec2f0(20),
-    :shape               => RECTANGLE,
-    :style               => OUTLINED|FILLED,
-    :stroke_width        => 4f0,
-    :glow_width          => 4f0,
-    :transparent_picking => true,
-    :color               => default(RGBA, s),
-    :stroke_color        => default(RGBA, s, 2),
-    :glow_color          => default(RGBA, s, 3),
-    :preferred_camera    => :orthographic_pixel
-)
+function overall_scale(stroke_width, glow_width, scale, style)
+    final_scale = Vec2f0(scale)
+    style|OUTLINED && (final_scale += stroke_width/2f0)
+    style|GLOWING  && (final_scale += glow_width/2f0)
+    final_scale
+end
 
-visualize{T <: Point{2}}(locations::VecOrSig{T}, s::Style, data::Dict) = _visualize(TextureBuffer(locations), s, data)
-
-
-function _visualize{T <: Point{2}}(positions::TextureBuffer{T, 1}, s::Style, data::Dict)
-    @materialize! primitive = data
-    @materialize stroke_width, scale, glow_width = data
-    data[:positions] = positions
-    data[:offset_scale] = const_lift(+, const_lift(/, stroke_width, Input(2)), glow_width, scale)
-    
-    robj = assemble_instanced(
-        positions,
-        data,
-        "util.vert", "particles2D.vert", "distance_shape.frag",
-    )
-    empty!(robj.prerenderfunctions)
-    prerender!(robj,
-        glDisable, GL_DEPTH_TEST,
-        glDepthMask, GL_FALSE,
-        glDisable, GL_CULL_FACE,
-        enabletransparency
-    )
-    robj
+function _default{T <: Point{2}}(::VecTypes{T}, s::Style, kw_args=Dict())
+    @gen_defaults! kw_args begin
+        scale               = 1f0
+        stroke_width        = 4f0
+        glow_width          = 4f0
+        style               = OUTLINED|FILLED
+        offset_scale        = const_lift(overall_scale, stroke_width, glow_width, scale, style)
+        primitive           = Rectangle(-0.5f0, -0.5f0, 1f0, 1f0)
+        shape               = RECTANGLE
+        transparent_picking = true
+        color               = default(RGBA, s)
+        stroke_color        = default(RGBA, s, 2)
+        glow_color          = default(RGBA, s, 3)
+        preferred_camera    = :orthographic_pixel
+    end
 end
 
 
-_default{T <: Real}(::Rectangle{T}, ::Style, kw_args=Dict()) = Dict(
-    :primitive          => GLUVMesh2D(Rectangle(0f0, 0f0, 1f0, 1f0)),
-    :shape              => Cint(RECTANGLE),
-    :style              => OUTLINED|FILLED,
-    :stroke_width       => 2f0,
-    :glow_width         => 2f0,
-    :transparent_picking => true,
-    :color              => default(RGBA),
-    :stroke_color       => RGBA{Float32}(0.3, 0.1, 0.9, 1.0),
-    :glow_color         => RGBA{Float32}(0.3, 0.1, 0.9, 1.0),
-    :preferred_camera   => :orthographic_pixel
-)
-
-rectangle_position(r::Rectangle) = Point{2, Float32}(r.x, r.y)
-rectangle_scale(r::Rectangle)    = Vec{2, Float32}(r.w, r.h)
-
-visualize{T}(r::Rectangle{T}, s::Style, customizations=visualize_default(r.value, s)) = visualize(Input(r), s, customizations)
-function visualize{T}(r::Signal{Rectangle{T}}, s::Style, customizations=visualize_default(r.value, s))
-    @materialize! primitive = customizations
-    @materialize stroke_width, glow_width = customizations
-    scale = const_lift(rectangle_scale, r)
-    data = merge(Dict(
-        :position  => const_lift(rectangle_position, r),
-        :scale     => scale,
-        :offset_scale => const_lift(+, const_lift(/, stroke_width, Input(2)), glow_width, scale)
-    ), collect_for_gl(primitive), customizations)
-
-    robj = assemble_std(
-        r, data,
-        "particles2D_single.vert", "distance_shape.frag",
-        boundingbox=const_lift(AABB{Float32}, r)
+function _visualize{T <: Point{2}}(particle::TextureBuffer{T, 1}, s::Style, data::Dict)
+    robj = assemble_shader(
+        positions, data,
+        "util.vert", "particles2D.vert", "distance_shape.frag",
     )
-    empty!(robj.prerenderfunctions)
-    empty!(robj.postrenderfunctions)
-    prerender!(robj,
-        glDisable, GL_DEPTH_TEST,
-        glDepthMask, GL_FALSE,
-        glDisable, GL_CULL_FACE,
-        enabletransparency
-    )
-    postrender!(robj,
-        render, robj.vertexarray
-    )
-    robj
+    
 end
