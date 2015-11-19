@@ -23,10 +23,10 @@ function _default{T <: Point{2}}(::VecTypes{T}, s::Style, kw_args=Dict())
 end
 
 
-function _visualize{T <: Point{2}}(particle::TextureBuffer{T, 1}, s::Style, data::Dict)
+function _visualize{T <: Point{2}}(particle::TextureBuffer{T}, s::Style, data::Dict)
     robj = assemble_shader(
         positions, data,
         "util.vert", "particles2D.vert", "distance_shape.frag",
     )
-    
+
 end

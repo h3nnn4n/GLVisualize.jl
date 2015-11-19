@@ -1,8 +1,3 @@
-type Grid{T}
-    from::Range{T}
-    to::Range{T}
-end
-
 visualize{T <: AbstractFloat}(t::Tuple{MatTypes{T}, Range, Range}, style) = visualize((t[1], Grid(t[2], t[3])), style)
 
 function _default{T <: AbstractFloat}(grid::MatTypes{T}, ::Style{:surface}, kw_args=Dict())

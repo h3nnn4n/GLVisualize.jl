@@ -6,7 +6,7 @@ _default(::GLNormalMesh, s::Style, kw_args=Dict()) = Dict{Symbol, Any}(
 #visualize(mesh::Mesh, s::Style, customizations=visualize_default(mesh, s)) = visualize(convert(GLNormalMesh, mesh), s, customizations)
 
 
-function _visualize(mesh::NativeMesh{GLNormalMesh}, s::Style, data::Dict) = assemble_std(
+_visualize(mesh::NativeMesh{GLNormalMesh}, s::Style, data::Dict) = assemble_std(
     mesh.vertices, data,
     "util.vert", "standard.vert", "standard.frag"
 )

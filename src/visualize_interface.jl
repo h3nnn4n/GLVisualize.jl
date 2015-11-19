@@ -13,7 +13,7 @@ visualize_default(value::Any, style::Style, kw_args=Dict{Symbol, Any}) = error("
 	visualize(::$(typeof(value)), ::Style, parameters::Dict{Symbol, Any}) => RenderObject""")
 
 function visualize_default(
-		value::Any, style::Symbol, kw_args::Dict{Symbol, Any}, 
+		value::Any, style::Symbol, kw_args::Dict{Symbol, Any},
 		defaults=Dict(
 		    :model      	  => Input(eye(Mat4f0)),
 		    :light      	  => Input(Vec3f0[Vec3f0(1.0,1.0,1.0), Vec3f0(0.1,0.1,0.1), Vec3f0(0.9,0.9,0.9), Vec3f0(20,20,20)]),
@@ -28,12 +28,12 @@ end
 """
 Creates a default visualization for any value.
 The dafaults can be customized via the key word arguments and the style parameter.
-The style can change the the look completely (e.g points displayed as lines, or particles), 
+The style can change the the look completely (e.g points displayed as lines, or particles),
 while the key word arguments just alter the parameters of one visualization.
 Always returns a context, which can be displayed on a window via view(::Context, [display]).
 """
 visualize(value::Any, style::Symbol=:default; kw_args...) =
-    visualize(value::Any, Style{style}, Dict{Symbol, Any}(kw_args)) # convert to internally used format
+    visualize(value::Any, Style{style}(), Dict{Symbol, Any}(kw_args)) # convert to internally used format
 
 function visualize(value::Any, style::Style, parameters::Dict)
     parameters[:origin] = value # preserve origin value... maybe this should be via weak reference?

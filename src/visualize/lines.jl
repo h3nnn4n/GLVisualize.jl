@@ -23,7 +23,7 @@ function lastlen(points)
     result
 end
 
-function visualize{T <: Point{2}}(locations::Signal{Vector{T}}}, s::style"lines", data)
+function visualize{T <: Point{2}}(locations::Signal{Vector{T}}, s::style"lines", data)
     if dotted
         ll = const_lift(lastlen, locations)
         data[maxlength] = const_lift(last, ll)
@@ -49,10 +49,8 @@ function visualize{T <: Point{2}}(positions::GLBuffer{T}, s::Style{:lines}, data
     data[:max_primitives] = Cint(length(positions)-4)
 
     program = GLVisualizeShader("util.vert", "lines.vert", "lines.geom", "lines.frag", attributes=data)
-    std_renderobject( 
+    std_renderobject(
         data, program,
-        Input(AABB{Float32}(ps)), GL_LINE_STRIP_ADJACENCY 
+        Input(AABB{Float32}(ps)), GL_LINE_STRIP_ADJACENCY
     )
 end
-
-

@@ -1,79 +1,61 @@
-immutable GLPoints end # only for dispatch 
-immutable DistanceField end # only for dispatch 
 
 
-typealias P_Primitive                     Union{VecTypes{Sprite}, AbstractMesh, GLPoints, DistanceField, Sprite}
-typealias P_Position{N, T}                Union{VecTypes{Point{N, T}}, Grid, Cube, Nothing}
-typealias P_Scale{N,T}                    Union{VecTypes{Vec{N, T}}, Vec{N, T}, T, Nothing}
-typealias P_Rotation{T <: Q.Quaternion}   Union{VecTypes{T}, T, Nothing} # rotation is optional (nothing)
-typealias P_Color{T <: Colorant}          Union{VecTypes{T}, T, Nothing}
-typealias P_Intensitiy{T <:AbstractFloat} Union{VecTypes{T}, T, Nothing}
+typealias P_Primitive                      Union{VecTypes{Sprite}, AbstractMesh, GLPoints, DistanceField, Sprite}
+typealias P_Position{T <: Point}           Union{VecTypes{T}, Grid, Cube, Void}
+typealias P_Scale{N,T}                     Union{VecTypes{Vec{N, T}}, Vec{N, T}, T, Void}
+typealias P_Rotation{T <: Quaternion}      Union{VecTypes{T}, T, Void} # rotation is optional (nothing)
+typealias P_Color{T <: Colorant}           Union{VecTypes{T}, T, Void}
+typealias P_Intensitiy{T <: AbstractFloat} Union{VecTypes{T}, T, Void}
 
-type Particle{PR <: P_Primitive, POS <: P_Position, SCALE <: P_Scale, ROT <: P_Rotation, C <: P_Color, I <: P_Intensitiy}
-    primitive ::PR
-    position  ::POS
-    scale     ::SCALE
-    rotation  ::ROT
-    color     ::C
-    intensity ::I
-    color_norm::Vec2f0
+
+
+
+
+function Particles(data::Dict)
+    @gen_defaults! data begin
+        primitive   = GLPoints()
+        position    = Grid(-1:1, -1:1)
+        scale       = nothing
+        rotation    = nothing
+        color       = nothing
+        intensity   = nothing
+        color_norm  = nothing
+    end
+    Particles([data[key] for key in fieldnames(Particles)]...)
 end
 
-#A few Particle combinations are not supported. We deal with it by defining error constructors
-Particle(p::GLPoints, positions, scale::Vec, rotation::Nothing, color, intensity, color_norm) = Particle(p,positions,scale,rotation,color,intensity,color_norm)
-Particle(p::GLPoints, positions, scale, rotation, color, intensity, color_norm) = throw(NotSupported("Rotation must be Nothing and scale must be scalar Vec{N}"))
+visualize{T<:Number}(p::MatTypes{T}, s::Style, data::Dict) = visualize((p, Grid(linspace(-1,1,size(p,1)), linspace(-1,1,size(p,1)))), s, data)
+visualize{T<:Number}(p::Tuple{MatTypes{T}, Grid}, s::Style, data::Dict) = _visualize(
+    Particles(scale=(data[:scale_x], data[:scale_y], p[1]), position=p[2]),
+    s, data
+)
 
-immutable Grid{N, T <: Range}
-    dims::NTuple{N, T}
+
+function visualize{T<:Point}(p::VecTypes{T}, s::Style, data::Dict)
+    data[:position] = p
+    _visualize(Particles(data), s, data)
 end
-Grid(ranges::Range...) = Grid(ranges)
-
-function Particle(;
-        primitive   = GLPoints,
-        position    = Grid(-1:1, -1:1),
-        scale       = nothing,
-        rotation    = nothing,
-        color       = nothing,
-        intensity   = nothing,
-        color_norm  = nothing,
-    )
-    Particle(
-        primitive,
-        position,
-        scale,
-        rotation,
-        color,
-        intensity,
-        color_norm
-    )
+function visualize(p::Tuple{P_Position, P_Primitive}, s::Style, data::Dict)
+    data[:position], data[:primitive] = p
+    _visualize(Particles(data), s, data)
 end
-
-Particle{T <: Vec3}(rotation::VecTypes{T},    primitive=Pyramidf0(), data)   = Particle(data, primitive=primitive, rotation=rotation)
-Particle{T <: Point3}(positions::VecTypes{T}, primitive=Cubef0(), data)      = Particle(data, primitive=primitive, position=positions)
-Particle{T <: Point2}(positions::VecTypes{T}, primitive=DistanceField, data) = Particle(data, primitive=primitive, position=positions)
-
-
-Particle(data::Dict; kw_args...) = Particle(;kw_args..., [(key, data[key]) for key in fieldnames(Particle)]...)
-
-visualize(p::P_Position, s::Style, data::Dict) = _visualize(Particle(p, data), s, data)
-visualize(p::Tuple{P_Position, P_Primitive}, s::Style, data::Dict) = _visualize(Particle(p..., data), s, data)
-
 
 _visualize{P <: AbstractMesh}(p::Particles{P}, s::Style, data::Dict) = assemble_shader(
     p, data,
-    "util.vert", "particles.vert", "standard.frag",
+    "util.vert", "Particles.vert", "standard.frag",
 )
-
 
 _visualize{P <: GLPoints}(p::Particles{P}, s::Style, data::Dict) = assemble_shader(
     p, data,
     "dots.vert", "dots.frag"
 )
 
+
+
 function _visualize{P <: DistanceField}(p::Particles{P}, s::Style, data::Dict)
     robj = assemble_shader(
         p, data,
-        "util.vert", "particles.vert", "distance_shape.frag",
+        "util.vert", "Particles.vert", "distance_shape.frag",
     )
     empty!(robj.prerenderfunctions)
     prerender!(robj,
@@ -83,4 +65,22 @@ function _visualize{P <: DistanceField}(p::Particles{P}, s::Style, data::Dict)
         enabletransparency
     )
     robj
+end
+
+function assemble_shader(p::Particles, data, shaderpaths...)
+    bb = AABB{Float32}(p)
+    data = merge(data, [key => gl_convert(p.(key)) for key in fieldnames(Particles)])
+    assemble_shader(p, data, bb, shaderpaths...)
+end
+function assemble_shader(main, data, boundingbox, shaderpaths...; primitive=GL_TRIANGLES)
+    program = GLVisualizeShader(shaders..., attributes=dict)
+    renderobject(main, data, program, boundingbox, primitive)
+end
+
+const NeedsInstancing = Union{Particles}
+function renderobject(main::NeedsInstancing, data, program, boundingbox, primitive)
+    instanced_renderobject(data, program, boundingbox, primitive, main)
+end
+function renderobject(main::NeedsInstancing, data, program, boundingbox, primitive)
+    std_renderobject(data, program, boundingbox, primitive, main)
 end
