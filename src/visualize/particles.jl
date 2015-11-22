@@ -1,86 +1,75 @@
+_default{T <: Point3}(main::VecTypes{T}, s::Style, data::Dict) = _default((centered(Cube),      main), s, data)
+_default{T <: Point2}(main::VecTypes{T}, s::Style, data::Dict) = _default((centered(Rectangle), main), s, data)
+function _default{T <: Vec3}(main::VolumeTypes{T}, s::Style, data::Dict)
+    data[:rotation] = main
+    grid = Grid(
+        linspace(-1f0, 1f0, size(main, 1))
+        linspace(-1f0, 1f0, size(main, 2))
+        linspace(-1f0, 1f0, size(main, 3))
+    )
+    _default((Pyramid(Point3f0(0,0,-0.5), 1f0, 0.2f0), grid), s, data)
+end
+
+_default{Primitive <: GeometryPrimitive{3}, Position <: Array{Point}}(p::Tuple{Primitive, Position}, s::Style, data) = @gen_defaults! data begin
+    primitive        = p[1] :: GLNormalMesh
+    color            = default(RGBA{Float32}, s) => TextureBuffer
+    position         = p[2]                      => TextureBuffer
+    scale            = nothing                   => TextureBuffer
+    rotation         = nothing                   => TextureBuffer
+    intensity        = nothing                   => TextureBuffer
+    color_norm       = nothing                   => TextureBuffer
+    boundingbox      = GLBoundingBox(position, scale, primitive)
+    shader           = ("util.vert", "particles.vert", "standard.frag")
+end
+
+_default{T <: Point}(positions::VectTypes{T}, s::style"points", data) = @gen_defaults! data begin
+    vertex       = positions => GLBuffer
+    point_size   = 2f0
+    prerender    = +((glPointSize, point_size),)
+    shader       = ("dots.vert", "dots.frag")
+    gl_primitive = GL_POINTS
+end
 
 
-typealias P_Primitive                      Union{VecTypes{Sprite}, AbstractMesh, GLPoints, DistanceField, Sprite}
-typealias P_Position{T <: Point}           Union{VecTypes{T}, Grid, Cube, Void}
-typealias P_Scale{N,T}                     Union{VecTypes{Vec{N, T}}, Vec{N, T}, T, Void}
-typealias P_Rotation{T <: Quaternion}      Union{VecTypes{T}, T, Void} # rotation is optional (nothing)
-typealias P_Color{T <: Colorant}           Union{VecTypes{T}, T, Void}
-typealias P_Intensitiy{T <: AbstractFloat} Union{VecTypes{T}, T, Void}
+function overall_scale(stroke_width, glow_width, scale, style)
+    final_scale = Vec3f0(scale)
+    (stroke_width > 0f0) && (final_scale += stroke_width/2f0)
+    (glow_width   > 0f0) && (final_scale += glow_width/2f0)
+    final_scale
+end
 
 
+primitive_shape(::Circle)    = CIRCLE
+primitive_shape(::Rectangle) = RECTANGLE
+
+_default{Primitive <: GeometryPrimitive{2}, Position <: Array{Point}}(p::Tuple{Primitive, Position}, s::Style, data) = @gen_defaults! data begin
+    scale               = 1f0
+    stroke_width        = 2f0
+    glow_width          = 0f0
+    offset_scale        = const_lift(overall_scale, stroke_width, glow_width, scale, style)
+    shape               = RECTANGLE
+    position            = p[2]                => GLBuffer
+    color               = default(RGBA, s)    => GLBuffer
+    stroke_color        = default(RGBA, s, 2) => GLBuffer
+    glow_color          = default(RGBA, s, 3) => GLBuffer
+    image               = nothing             => Texture
+    distancefield       = nothing             => Texture
+    transparent_picking = true
+    preferred_camera    = :orthographic_pixel
+    shader              = ("util.vert", "billboards.geom", "billboards.vert", "distance_shape.frag")
+    gl_primitive        = GL_POINTS
+end
 
 
-
-function Particles(data::Dict)
-    @gen_defaults! data begin
-        primitive   = GLPoints()
-        position    = Grid(-1:1, -1:1)
-        scale       = nothing
-        rotation    = nothing
-        color       = nothing
-        intensity   = nothing
-        color_norm  = nothing
+_default{T <: Vec{3}}(p::Tuple{Prim, }, s::Style, data) = @gen_defaults! begin
+    vectorfield    = vf => Texture(;minfilter=:nearest, x_repeat=:clamp_to_edge)
+    primitive      =  :: GLNormalMesh
+    boundingbox    = AABB{Float32}(Vec3f0(-1), Vec3f0(1)),
+    color_norm     = begin 
+        _norm = map(norm, vectorfield)
+        Vec2f0(minimum(_norm), maximum(_norm))
     end
-    Particles([data[key] for key in fieldnames(Particles)]...)
+    color          = default(Vector{RGBA})
+    shader         = ("util.vert", "vectorfield.vert", "standard.frag")
 end
 
-visualize{T<:Number}(p::MatTypes{T}, s::Style, data::Dict) = visualize((p, Grid(linspace(-1,1,size(p,1)), linspace(-1,1,size(p,1)))), s, data)
-visualize{T<:Number}(p::Tuple{MatTypes{T}, Grid}, s::Style, data::Dict) = _visualize(
-    Particles(scale=(data[:scale_x], data[:scale_y], p[1]), position=p[2]),
-    s, data
-)
-
-
-function visualize{T<:Point}(p::VecTypes{T}, s::Style, data::Dict)
-    data[:position] = p
-    _visualize(Particles(data), s, data)
-end
-function visualize(p::Tuple{P_Position, P_Primitive}, s::Style, data::Dict)
-    data[:position], data[:primitive] = p
-    _visualize(Particles(data), s, data)
-end
-
-_visualize{P <: AbstractMesh}(p::Particles{P}, s::Style, data::Dict) = assemble_shader(
-    p, data,
-    "util.vert", "Particles.vert", "standard.frag",
-)
-
-_visualize{P <: GLPoints}(p::Particles{P}, s::Style, data::Dict) = assemble_shader(
-    p, data,
-    "dots.vert", "dots.frag"
-)
-
-
-
-function _visualize{P <: DistanceField}(p::Particles{P}, s::Style, data::Dict)
-    robj = assemble_shader(
-        p, data,
-        "util.vert", "Particles.vert", "distance_shape.frag",
-    )
-    empty!(robj.prerenderfunctions)
-    prerender!(robj,
-        glDisable, GL_DEPTH_TEST,
-        glDepthMask, GL_FALSE,
-        glDisable, GL_CULL_FACE,
-        enabletransparency
-    )
-    robj
-end
-
-function assemble_shader(p::Particles, data, shaderpaths...)
-    bb = AABB{Float32}(p)
-    data = merge(data, [key => gl_convert(p.(key)) for key in fieldnames(Particles)])
-    assemble_shader(p, data, bb, shaderpaths...)
-end
-function assemble_shader(main, data, boundingbox, shaderpaths...; primitive=GL_TRIANGLES)
-    program = GLVisualizeShader(shaders..., attributes=dict)
-    renderobject(main, data, program, boundingbox, primitive)
-end
-
-const NeedsInstancing = Union{Particles}
-function renderobject(main::NeedsInstancing, data, program, boundingbox, primitive)
-    instanced_renderobject(data, program, boundingbox, primitive, main)
-end
-function renderobject(main::NeedsInstancing, data, program, boundingbox, primitive)
-    std_renderobject(data, program, boundingbox, primitive, main)
-end

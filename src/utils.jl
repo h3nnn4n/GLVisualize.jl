@@ -12,59 +12,38 @@ function Base.split(condition::Function, associative::Associative)
     A, B
 end
 
-#creates methods to accept signals, which then gets transfert to an OpenGL target type
-macro visualize_gen(input, target, S)
-    esc(quote
-        visualize(value::$input, s::$S, customizations=visualize_default(value, s)) =
-            visualize($target(value), s, customizations)
 
-        function visualize(signal::Signal{$input}, s::$S, customizations=visualize_default(signal.value, s))
-            tex = $target(signal.value)
-            const_lift(update!, Input(tex), signal)
-            visualize(tex, s, customizations)
-        end
-    end)
+function GLVisualizeShader(shaders)
+    shaders = map(shader -> load(joinpath(shaderdir(), shader)), shaders)
+    (shaders, ((:fragdatalocation,[(0, "fragment_color"), (1, "fragment_groupid")]),
+        (:updatewhile,ROOT_SCREEN.inputs[:open]), (:update_interval,1.0))
+    )
+end
+function assemble_shader(data)
+    shader = GLVisualizeShader(data[:shader])
+    delete!(data, :shader)
+    bb  = get(data, :boundingbox, Signal(centered(AABB)))
+    glp = get(data, :gl_primtive, GL_TRIANGLES)
+    if haskey(data, :instances) 
+        robj = instanced_renderobject(data, shader, bb, glp, data[:instances])
+    else
+        robj = renderobject(data, shader, bb, glp, nothing)
+    end
+    Context(robj)
 end
 
-
-# scalars can be uploaded directly to gpu, but not arrays
-texture_or_scalar(x) = x
-texture_or_scalar(x::Array) = Texture(x)
-function texture_or_scalar{A <: Array}(x::Signal{A})
-    tex = Texture(x.value)
-    const_lift(update!, tex, x)
-    tex
+function renderobject(main::NeedsInstancing, data, program, boundingbox, primitive)
+    instanced_renderobject(data, program, boundingbox, GL_TRIANGLES, main)
 end
+function renderobject(main, data, program, boundingbox, primitive)
+    std_renderobject(data, program, boundingbox, GL_TRIANGLES, main)
+end
+
 
 isnotempty(x) = !isempty(x)
 AND(a,b) = a&&b
 OR(a,b) = a||b
-export OR
-
-
-function GLVisualizeShader(shaders...; attributes...)
-    shaders = map(shader -> load(joinpath(shaderdir(), shader)), shaders)
-    TemplateProgram(shaders...;
-        attributes...,  fragdatalocation=[(0, "fragment_color"), (1, "fragment_groupid")],
-        updatewhile=ROOT_SCREEN.inputs[:open], update_interval=1.0
-    )
-end
-
-function default_boundingbox(main, model)
-    main == nothing && return Input(AABB{Float32}(Vec3f0(0), Vec3f0(1)))
-    const_lift(*, model, AABB{Float32}(main))
-end
-function assemble_std(main, dict, shaders...; boundingbox=default_boundingbox(main, get(dict, :model, eye(Mat{4,4,Float32}))), primitive=GL_TRIANGLES)
-    program = GLVisualizeShader(shaders..., attributes=dict)
-    std_renderobject(dict, program, boundingbox, primitive, main)
-end
-
-function assemble_instanced(main, dict, shaders...; boundingbox=default_boundingbox(main, get(dict, :model, eye(Mat{4,4,Float32}))), primitive=GL_TRIANGLES)
-    program = GLVisualizeShader(shaders..., attributes=dict)
-    instanced_renderobject(dict, program, boundingbox, primitive, main)
-end
-
-
+export OR, AND, isnotempty
 
 function y_partition(area, percent)
     amount = percent / 100.0

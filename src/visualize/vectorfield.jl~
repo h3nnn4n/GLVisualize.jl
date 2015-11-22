@@ -14,7 +14,7 @@ function visualize{T <: Vec{3}}(vectorfield::Texture{T, 3}, s::Style, data=visua
     assemble_instanced(
         vectorfield, data,
         "util.vert", "vectorfield.vert", "standard.frag",
-        boundingbox=Input(boundingbox)
+        boundingbox=Signal(boundingbox)
     )
 end
 

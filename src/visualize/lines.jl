@@ -1,19 +1,23 @@
-function _default{T <: Point{2}}(x::VecTypes{T}, s::style"lines", kw_args=Dict())
-    dotted = get!(kw_args, :dotted, false)
+_default{T <: Point}(position::VecTypes{T}, s::style"lines", data) = @gen_defaults! data begin
+    dotted              = false
+    vertex              = position               :: (Vector => GLBuffer,)
+    color               = default(RGBA, s, 1)    :: (Vector => GLBuffer,)
+    stroke_color        = default(RGBA, s, 2)    :: (Vector => GLBuffer,)
     if dotted
-        ll = const_lift(lastlen, locations)
-        kw_args[maxlength] = const_lift(last, ll)
-        kw_args[lastlen]  = gl_convert(GLBuffer, ll)
+        lastlen         = const_lift(lastlen, x) :: (Vector => GLBuffer,)
+        maxlength       = const_lift(last, ll)
     end
-    Dict(
-        :shape               => RECTANGLE,
-        :style               => FILLED,
-        :transparent_picking => false,
-        :preferred_camera    => :orthographic_pixel,
-        :color               => default(RGBA, s),
-        :thickness           => 2f0,
-    )
+    thickness           = 2f0
+    shape               = RECTANGLE
+    style               = FILLED
+    transparent_picking = false
+    preferred_camera    = :orthographic_pixel
+    max_primitives      = length(position)-4
+    boundingbox         = GLBoundingBox(position)
+    shader              = ("util.vert", "lines.vert", "lines.geom", "lines.frag")
+    gl_primitive        = GL_LINE_STRIP_ADJACENCY
 end
+
 function lastlen(points)
     result = zeros(eltype(points[1]), length(points))
     for i=1:length(points)
@@ -23,34 +27,18 @@ function lastlen(points)
     result
 end
 
-function visualize{T <: Point{2}}(locations::Signal{Vector{T}}, s::style"lines", data)
-    if dotted
-        ll = const_lift(lastlen, locations)
-        data[maxlength] = const_lift(last, ll)
-        data[lastlen]  = gl_convert(GLBuffer, ll)
-    end
-    visualize(gl_convert(GLBuffer, locations), s, data)
-end
-
-
-function visualize{T <: AbstractFloat}(positions::Vector{T}, range::Range, s::Style{:lines}, data)
+function _default{T <: AbstractFloat}(positions::Vector{T}, range::Range, s::style"lines", data)
     length(positions) != length(range) && throw(
         DimensionMismatsch("length of $(typeof(positions)) $(length(positions)) and $(typeof(range)) $(length(range)) must match")
     )
-    visualize(points2f0(positions, range), s, data)
+    _default(points2f0(positions, range), s, data)
 end
 
-
-function visualize{T <: Point{2}}(positions::GLBuffer{T}, s::Style{:lines}, data)
-    ps = gpu_data(positions)
-    data[:vertex]    = positions
-    data[:lastlen]   = ll
-    data[:maxlength] = maxlength
-    data[:max_primitives] = Cint(length(positions)-4)
-
-    program = GLVisualizeShader("util.vert", "lines.vert", "lines.geom", "lines.frag", attributes=data)
-    std_renderobject(
-        data, program,
-        Input(AABB{Float32}(ps)), GL_LINE_STRIP_ADJACENCY
-    )
+#Parametric rendering of arbitrary opengl functions
+_default(func::Shader, s::Style, data) = @gen_defaults! data begin
+    primitive        = Rectangle{Float32}(0f0,0f0,1f0,1f0) :: GLUVMesh2D
+    color            = default(RGBA, s),
+    boundingbox      = GLBoundingBox(primitive)
+    preferred_camera = :orthographic_pixel
+    shader           = ("parametric.vert", "parametric.frag", (view => Dict("function" => bytestring(func.source))))
 end
