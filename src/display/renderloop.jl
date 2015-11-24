@@ -47,7 +47,7 @@ function postprocess(framebuffer::GLFramebuffer, screen::Screen)
         resolution = const_lift(Vec2f0, screen.inputs[:framebuffer_size])
         u_texture0 = framebuffer.color
         primitive  = GLUVMesh2D(Rectangle(-1f0,-1f0, 2f0, 2f0))
-        shader = ("fxaa.vert", "fxaa.frag", "fxaa_combine.frag")
+        shader = GLVisualizeShader("fxaa.vert", "fxaa.frag", "fxaa_combine.frag")
     end))[]
 end
 
@@ -78,7 +78,7 @@ export glscreen
 function glscreen()
 	name="GLVisualize"
 	resolution=nothing
-	debugging=false
+	debugging=true
 
     windowhints = [
         (GLFW.SAMPLES,      0),
@@ -130,12 +130,12 @@ function renderloop(screen, selectionquery, selection, postprocess_robj, renderl
     render_framebuffer = screen.inputs[:framebuffer].render_framebuffer
     objectid_buffer = screen.inputs[:framebuffer].objectid
     while screen.inputs[:open].value
-    	#@async Reactive.run(100)
         renderloop_inner(screen, render_framebuffer, objectid_buffer, selectionquery, selection, postprocess_robj)
         renderloop_callback()
     end
     GLFW.Terminate()
     FreeTypeAbstraction_done()
+    empty_shadercache()
 end
 function renderloop_inner(screen, render_framebuffer, objectid_buffer, selectionquery, selection, postprocess_robj)
     #tic()
@@ -286,5 +286,15 @@ end
 function screenshot(window, path="screenshot.png")
     img = gpu_data(window.inputs[:framebuffer].color)[window.area.value]
     save(path, rotl90(img), true)
+end
+
+function depthmap(window, path="depthmap.png")
+    fb = window.inputs[:framebuffer]
+    window_size = window.area.value.w, window.area.value.h
+    glBindFramebuffer(GL_FRAMEBUFFER, fb.render_framebuffer)
+    glBindRenderbuffer(GL_RENDERBUFFER, fb.depth)
+    buffer = zeros(Float32, window_size...)
+    glReadPixels(0, 0, window_size..., GL_DEPTH_COMPONENT32, GL_FLOAT, buffer)
+    buffer
 end
 export screenshot

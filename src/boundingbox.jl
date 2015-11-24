@@ -23,14 +23,16 @@ call{T}(B::Type{AABB{T}}, a::GPUArray) = B(gpu_data(a))
 call{T, P<:Point}(B::Type{AABB{T}}, positions::GPUArray{P}, scale::GPUArray, primitive_bb) = B(gpu_data(positions), gpu_data(scale), primitive_bb)
 call{T, P<:Point}(B::Type{AABB{T}}, positions::GPUArray{P}, scale::Vec3f0, primitive_bb) = B(gpu_data(positions), scale, primitive_bb)
 call{T, P<:Point}(B::Type{AABB{T}}, positions::GPUArray{P}, scale::Void, primitive_bb) = B(gpu_data(positions), Vec3f0(1), primitive_bb)
-call{T, P<:Point}(B::Type{AABB{T}}, positions::Vector{P},   scale::Void, primitive_bb) = B(positions, Vec3f0(1), primitive_bb)
+call{T, P<:Point}(B::Type{AABB{T}}, positions::VecOrSignal{P}, scale::Void, primitive_bb) = B(value(positions), Vec3f0(1), primitive_bb)
 
 
-function call{T, T2, N}(B::Type{AABB{T}}, positions::Vector{Point{N, T2}}, scale, primitive)
+function call{T, T2, N}(B::Type{AABB{T}}, positions::VecOrSignal{Point{N, T2}}, scale, primitive)
     bb = B(primitive)
     B(value(positions), value(scale), bb)
 end
-function call{T, T2, T3, N}(::Type{AABB{T}}, positions::Vector{Point{N, T2}}, scale::Vec{N, T3}, primitive_bb::AABB)
+function call{T, T2, T3, N}(B::Type{AABB{T}}, p::VecOrSignal{Point{N, T2}}, scale::Vec{N, T3}, bb)
+    primitive_bb = B(bb)
+    positions = value(p)
     primitive_scaled_min = minimum(primitive_bb) .* scale
     primitive_scaled_max = maximum(primitive_bb) .* scale
     pmax = max(primitive_scaled_min, primitive_scaled_max)
@@ -39,7 +41,8 @@ function call{T, T2, T3, N}(::Type{AABB{T}}, positions::Vector{Point{N, T2}}, sc
     mini,maxi = minimum(main_bb) + pmin, maximum(main_bb) + pmax
     AABB{T}(mini, maxi)
 end
-function call{T, T2, T3, N}(::Type{AABB{T}}, p::Vector{Point{N, T2}}, s::Vector{Vec{N, T3}}, primitive_bb)
+function call{T, T2, T3, N}(B::Type{AABB{T}}, p::VecOrSignal{Point{N, T2}}, s::VecOrSignal{Vec{N, T3}}, bb)
+    primitive_bb = B(bb)
     positions, scale = value(p), value(s)
     _max = Vec{N, T}(typemin(T))
     _min = Vec{N, T}(typemax(T))

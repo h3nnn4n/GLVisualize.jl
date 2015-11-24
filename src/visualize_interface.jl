@@ -63,7 +63,7 @@ This is convenient, to quickly switch out default styles.
 default{T}(::T, s::Style) = default(T, s)
 
 const color_defaults = RGBA{Float32}[
-	RGBA{Float32}(0.78, 0.01, 0.93, 1.0),
+	RGBA{Float32}(0.0f0,0.74736935f0,1.0f0,1.0f0),
 	RGBA{Float32}(0.78, 0.01, 0.93, 1.0),
 	RGBA{Float32}(0.78, 0.01, 0.93, 1.0),
 	RGBA{Float32}(0.78, 0.01, 0.93, 1.0)

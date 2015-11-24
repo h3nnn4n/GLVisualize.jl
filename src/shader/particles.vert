@@ -63,7 +63,7 @@ mat4 rotation_mat(vec3 direction)
     return rot;
 }
 
-void rotate(Nothing r, in vec3 vertices, in vec3 normal, int index){} // no-op
+void rotate(Nothing r, int index, in vec3 vertices, in vec3 normal){} // no-op
 void rotate(samplerBuffer vectors, int index, inout vec3 V, inout vec3 N)
 {
     vec3 r = texelFetch(vectors, index).xyz;
@@ -95,6 +95,7 @@ vec3 _position(Nothing position, samplerBuffer position_x, samplerBuffer positio
 }
 //vec3 position(AABB cube, Nothing position_x, Nothing position_y, Nothing position_z, int index);
 //vec3 position(Rectangle rect, Nothing position_x, Nothing position_y, Nothing position_z, int index);
+void scale_it(Nothing scale, Nothing scale_x, Nothing scale_y, Nothing scale_z, int index, inout vec3 V){}
 void scale_it(vec3 scale, Nothing scale_x, Nothing scale_y, Nothing scale_z, int index, inout vec3 V){V *= scale;}
 void scale_it(samplerBuffer scale, Nothing scale_x, Nothing scale_y, Nothing scale_z, int index, inout vec3 V){
     V *= getindex(scale, index).xyz;

@@ -57,20 +57,16 @@ include(joinpath("edit", "numbers.jl"))
 include(joinpath("edit", "line_edit.jl"))
 export vizzedit # edits some value, name should be changed in the future!
 
-include(joinpath("visualize", "shared.jl"))
 include(joinpath("visualize", "text", "utils.jl"))
 include(joinpath("visualize", "lines.jl"))
 include(joinpath("visualize", "containers.jl"))
-include(joinpath("visualize", "distancefields.jl"))
-include(joinpath("visualize", "image.jl"))
+include(joinpath("visualize", "image_like.jl"))
 include(joinpath("visualize", "mesh.jl"))
 include(joinpath("visualize", "particles.jl"))
 include(joinpath("visualize", "surface.jl"))
 include(joinpath("visualize", "text.jl"))
 include(joinpath("visualize", "videos.jl"))
 include(joinpath("visualize", "volume.jl"))
-include(joinpath("visualize", "colormap.jl"))
-include(joinpath("visualize", "parametric.jl"))
 
 include("camera.jl")
 export cubecamera

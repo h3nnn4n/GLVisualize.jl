@@ -18,16 +18,6 @@ for ei in eachindex(heightfield)
 	heightfield[ei] = map_kernel(x, y, α)
 end
 
-view(visualize(heightfield))
+view(visualize(heightfield), method=:orthographic_pixel)
 r()
 
-heightfield = Texture(zeros(Float32, w,h))
-kernel = comp"""
-uniform Complex alpha;
-uniform float param1;
-Complex sqrtx2(Complex z){return sqrt(z-1)*sqrt(z+1);}
-float kernel(vec2 xy){
-	return imag((x+im*y + sqrtx2(x+im*y)));
-}
-"""
-map(kernel, heightfield, alpha=α, param=xxx)
