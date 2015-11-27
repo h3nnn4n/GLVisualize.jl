@@ -27,8 +27,8 @@ function visualize(text::AbstractString, s::Style, customizations=visualize_defa
     glyphs        = GPUVector(texture_buffer(process_for_gl(text)))
     positions     = GPUVector(texture_buffer(calc_position(glyphs, startposition)))
     style_index   = GPUVector(texture_buffer(fill(GLSpriteStyle(UInt16(0), UInt16(0)), length(text))))
-    visualize(glyphs, positions, style_index, customizations[:model], s, customizations)  
-end 
+    visualize(glyphs, positions, style_index, customizations[:model], s, customizations)
+end
 
 function update_text(newtext::AbstractString, text_robj::RenderObject)
     @materialize positions, glyphs, style_index = text_robj.uniforms
@@ -45,9 +45,9 @@ function visualize{S <: AbstractString}(text::Signal{S}, s::Style, customization
     robj        = visualize(glyphs, positions, style_index, customizations[:model], s, customizations)
     preserve(const_lift(update_text, text, Signal(robj)))
     robj
-end 
+end
 function visualize(
-        glyphs      ::GPUVector{GLSprite}, 
+        glyphs      ::GPUVector{GLSprite},
         positions   ::GPUVector{Point{2, Float16}},
         style_index ::GPUVector{GLSpriteStyle},
         model,
@@ -70,6 +70,7 @@ function visualize(
         boundingbox=const_lift(*, model, AABB{Float32}(bb.minimum, Vec3f0(bb.maximum)+Vec3f0(extent.advance..., 0f0)))
     )
     empty!(robj.prerenderfunctions)
+    empty!(robj.prefun_lookup)
     prerender!(robj,
         glDisable, GL_DEPTH_TEST,
         glDepthMask, GL_FALSE,
@@ -99,7 +100,7 @@ function cursor(positions, range, model)
     ), collect_for_gl(GLUVMesh2D(Rectangle(0f0, 0f0, 1f0, 1f0))))
 
     shader = assemble_std(
-        Rectangle(0f0, 0f0, 1f0, 1f0), data, 
+        Rectangle(0f0, 0f0, 1f0, 1f0), data,
         "util.vert", "text_single.vert", "distance_shape.frag"
     )
 end
@@ -123,15 +124,15 @@ insert_enter(x) = utf8("\n")
 
 function textedit_signals(inputs, background, text)
     @materialize unicodeinput, selection, buttonspressed, arrow_navigation, mousedragdiff_objectid = inputs
-    # create object which can globally hold the text and selection 
+    # create object which can globally hold the text and selection
     text_raw    = TextWithSelection(text[:glyphs], 0:0)
     text_edit   = Signal(text_raw)
     shift       = const_lift(in, GLFW.KEY_LEFT_SHIFT, buttonspressed)
     selection   = preserve(const_lift(
-        last, 
+        last,
         foldp(
-            move_cursor, 
-            (selection.value, selection.value), 
+            move_cursor,
+            (selection.value, selection.value),
             arrow_navigation, selection,
             text_edit,
             shift
@@ -140,7 +141,7 @@ function textedit_signals(inputs, background, text)
 
     is_text(x) = x[2][1] == background.id || x[2][1] == text.id
     selection  = filterwhen(
-        const_lift(is_text, mousedragdiff_objectid), 
+        const_lift(is_text, mousedragdiff_objectid),
         0:0, selection
     )
     preserve(const_lift(s->(text_edit.value.selection=s), selection)) # is there really no other way?!
@@ -164,7 +165,7 @@ function textedit_signals(inputs, background, text)
     unicode_input   = filterwhen(text_gate, Char['0'], unicodeinput)
     text_to_insert  = merge(clipboard_paste, unicode_input, enter_insert)
     text_to_insert  = const_lift(process_for_gl, text_to_insert)
-    
+
     text_inserted   = const_lift(inserttext, text_edit, text_to_insert)
 
     text_updates    = merge(
@@ -187,9 +188,9 @@ end
 
 function vizzedit(glyphs::GPUVector{GLSprite}, text::RenderObject, inputs)
     background = visualize(
-        glyphs, 
-        text[:positions], 
-        GPUVector(texture_buffer(fill(GLSpriteStyle(0,0), length(text[:positions])))), 
+        glyphs,
+        text[:positions],
+        GPUVector(texture_buffer(fill(GLSpriteStyle(0,0), length(text[:positions])))),
         text[:model],
         Style{:square}()
     )

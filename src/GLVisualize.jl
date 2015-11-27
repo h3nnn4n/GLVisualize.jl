@@ -21,6 +21,9 @@ import Images
 
 import Base: merge, convert, show
 
+assetpath(folders...) = joinpath(dirname(@__FILE__), "..", "assets", folders...)
+loadasset(folders...) = load(assetpath(folders...))
+export assetpath, loadasset
 
 shaderdir() = Pkg.dir("GLVisualize", "src", "shader")
 

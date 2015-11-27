@@ -32,13 +32,14 @@ function visualize{T <: Point{2}}(
     data = merge(collect_for_gl(primitive), customizations)
     data[:positions] = positions
     data[:offset_scale] = const_lift(+, const_lift(/, stroke_width, Signal(2)), glow_width, scale)
-    
+
     robj = assemble_instanced(
         positions,
         data,
         "util.vert", "particles2D.vert", "distance_shape.frag",
     )
     empty!(robj.prerenderfunctions)
+    empty!(robj.prefun_lookup)
     prerender!(robj,
         glDisable, GL_DEPTH_TEST,
         glDepthMask, GL_FALSE,

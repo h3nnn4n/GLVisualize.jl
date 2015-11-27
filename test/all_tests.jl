@@ -28,7 +28,7 @@ println("some more funcitonality from Meshes")
 
 
 # obj import
-push!(TEST_DATA, visualize(GLNormalMesh("cat.obj")))
+push!(TEST_DATA, visualize(loadasset("cat.obj")))
 
 println("particles")
 
@@ -49,7 +49,7 @@ push!(TEST_DATA, particle_data(1024))
 particle_color_pulse(x) = RGBA(x, 0f0, 1f0-x, 1f0)
 push!(TEST_DATA,  visualize(
 	Point3f0[rand(Point3f0, 0f0:0.001f0:2f0) for i=1:1024],
-	primitive 	= GLNormalMesh("cat.obj"),
+	primitive 	= loadasset("cat.obj"),
 	color 		= const_lift(particle_color_pulse, bounce(0f0:0.1f0:1f0)),
 	scale 		= Vec3f0(0.2)
 ))
@@ -148,20 +148,20 @@ push!(TEST_DATA2D, visualize(dfdata, :distancefield))
 
 
 function image_test_data(N)
-	test_image_dir = Pkg.dir("GLVisualize", "test", "test_images")
+	test_image_dir = assetpath("test_images")
 	abs_paths = map(x->joinpath(test_image_dir, x), readdir(test_image_dir))
 	return map(visualize, (
 		RGBA{U8}[RGBA{U8}(abs(sin(i)), abs(sin(j)), abs(cos(i)), abs(sin(j)*cos(i))) for i=1:0.1:N, j=1:0.1:N],
-		#map(load, abs_paths)...
+		map(load, abs_paths)...
 	))
 end
 
 
 push!(TEST_DATA2D, image_test_data(20)...)
-let gif = load("doge.png").data, N = 512, particle_color = Texture(map(x->RGBA{U8}(x.r, x.g, x.b, 1.), colormap("Blues", N)))
+let gif = loadasset("doge.png").data, N = 512
 
 s = Vec2f0(15)
-# 2D particles
+# 2D particles()
 particle_data2D(i, N) = Point2f0[rand(Point2f0, -10f0:eps(Float32):10f0) for x=1:N]
 const p2ddata = foldp(+, Point2f0[rand(Point2f0, 0f0:eps(Float32):1000f0) for x=1:N],
 	const_lift(particle_data2D, bounce(1f0:1f0:50f0), N))
@@ -171,14 +171,14 @@ particle_robj = visualize(p2ddata, scale=s)
 
 
 push!(TEST_DATA2D, particle_robj)
-push!(TEST_DATA2D, visualize(particle_robj[:positions], scale=s, color=particle_color, style=Cint(OUTLINED), shape=Cint(ROUNDED_RECTANGLE)))
+push!(TEST_DATA2D, visualize(particle_robj[:positions], scale=s, style=Cint(OUTLINED), shape=Cint(ROUNDED_RECTANGLE)))
 push!(TEST_DATA2D, visualize(particle_robj[:positions], scale=s, style=Cint(FILLED), shape=Cint(CIRCLE)))
 push!(TEST_DATA2D, visualize(particle_robj[:positions], scale=s, style=Cint(FILLED)|Cint(FILLED), shape=Cint(RECTANGLE)))
 push!(TEST_DATA2D, visualize(particle_robj[:positions], scale=s, style=Cint(FILLED)|Cint(FILLED)|Cint(GLOWING), shape=Cint(ROUNDED_RECTANGLE)))
-	
+
 push!(TEST_DATA2D, visualize(
-	particle_robj[:positions], 
-	style=Cint(FILLED)|Cint(FILLED)|Cint(TEXTURE_FILL), 
+	particle_robj[:positions],
+	style=Cint(FILLED)|Cint(FILLED)|Cint(TEXTURE_FILL),
 	shape=Cint(ROUNDED_RECTANGLE),
 	texture_fill=Texture(gif), scale=Vec2f0(50)),
 )
@@ -190,11 +190,3 @@ push!(TEST_DATA2D, visualize(const_lift(curve_data, bounce(20f0:0.1f0:1024f0)), 
 # text
 include("utf8_example_text.jl")
 push!(TEST_DATA2D, visualize(utf8_example_text))
-
-
-let 
-	image_dir = Pkg.dir("GLVisualize", "test", "test_images")
-	images = map(visualize, map(load, map(x->joinpath(image_dir,x), readdir(image_dir))))
-	append!(TEST_DATA2D, images)
-end
-
